@@ -47,6 +47,7 @@ sensor/
 │   └── CMakeLists.txt
 ├── examples/
 │   ├── motor_test/             # Ejemplo de prueba de motores
+│   ├── web_control/            # Ejemplo de control web
 │   └── vl53l0x_test/           # Ejemplo de sensor VL53L0X
 ├── MOTOR_TEST_GUIDE.md         # Guía de prueba de motores
 ├── WEB_CONTROL_GUIDE.md        # Guía de control web
