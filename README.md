@@ -49,7 +49,7 @@ sensor/
 - **Driver:** MX1508 (x2)
 - **Motor tracción:** Conectado a GPIO 7, 8
 - **Motor dirección:** Conectado a GPIO 9, 10
-- **Alimentación motores:** 7.4V LiPo (separada del ESP32)
+- **Alimentación motores:** 5V (separada del ESP32)
 - **PWM:** 1000 Hz
 
 ### Sensor de Distancia
@@ -180,14 +180,14 @@ El `main.c` actual ejecuta un test completo de los motores:
 ```
 ESP32 (USB 5V) ──────┐
                      │
-MX1508 (7.4V LiPo) ──┼── GND común
+MX1508 (5V) ──┼── GND común
                      │
 Motores ─────────────┘
 ```
 
 - **NO** alimentar motores desde el ESP32
 - **SÍ** conectar GND común entre ESP32 y MX1508
-- **SÍ** usar batería LiPo 7.4V para motores
+- **SÍ** usar alimentación de 5V para motores
 
 ### Frecuencia PWM
 

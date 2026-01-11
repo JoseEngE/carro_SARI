@@ -17,7 +17,7 @@ Este documento explica cómo funciona la prueba de motores para el carro RC con 
 - **Función:** Controla dirección (izquierda/derecha)
 
 ### Alimentación
-- **VM** → 3.7-9.6V (batería del carro)
+- **VM** → 5V (alimentación del motor)
 - **GND** → GND común con ESP32
 
 ## 📋 Estructura de la Prueba
@@ -181,7 +181,7 @@ motor_steering_set_angle(-80);
    - Comprueba GND común
 
 2. **Verificar alimentación:**
-   - Batería cargada (3.7-9.6V)
+   - Alimentación de 5V
    - Conexión VM del MX1508
 
 3. **Verificar en el monitor:**
@@ -205,7 +205,7 @@ motor_steering_set_angle(-80);
 ### Motor se mueve muy lento
 
 1. **Aumentar el porcentaje de velocidad** en el código
-2. **Verificar voltaje de batería** - debe ser > 6V para mejor rendimiento
+2. **Verificar voltaje de alimentación** - debe ser 5V para mejor rendimiento
 3. **Revisar conexiones** - resistencia alta puede reducir potencia
 
 ### Dirección no regresa al centro
