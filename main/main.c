@@ -1,8 +1,8 @@
 /**
  * @file main.c
- * @brief RC Car Motor Test - Main Application
+ * @brief RC Car Web Control - Main Application
  * 
- * Simple motor control test for RC car
+ * Web-based control for RC car with mobile interface
  */
 
 #include <stdio.h>
@@ -10,13 +10,38 @@
 #include "freertos/task.h"
 #include "esp_log.h"
 #include "motor_control.h"
+#include "web_control.h"
 
 static const char *TAG = "MAIN";
+
+/**
+ * @brief Motor control callback - called when web commands are received
+ */
+void motor_callback(int8_t throttle, int8_t steering)
+{
+    ESP_LOGI(TAG, "Motor command: throttle=%d, steering=%d", throttle, steering);
+    
+    // Apply throttle (forward/backward)
+    if (throttle > 5) {
+        motor_drive_forward(throttle);
+    } else if (throttle < -5) {
+        motor_drive_backward(-throttle);
+    } else {
+        motor_drive_stop();
+    }
+    
+    // Apply steering (left/right)
+    if (steering > 5 || steering < -5) {
+        motor_steering_set_angle(steering);
+    } else {
+        motor_steering_center();
+    }
+}
 
 void app_main(void) {
     ESP_LOGI(TAG, "");
     ESP_LOGI(TAG, "╔════════════════════════════════════════╗");
-    ESP_LOGI(TAG, "║    RC Car Motor Test - MX1508          ║");
+    ESP_LOGI(TAG, "║    RC Car Web Control System           ║");
     ESP_LOGI(TAG, "╚════════════════════════════════════════╝");
     ESP_LOGI(TAG, "");
     
@@ -47,160 +72,49 @@ void app_main(void) {
         ESP_LOGE(TAG, "Failed to initialize motors!");
         return;
     }
+    ESP_LOGI(TAG, "✓ Motors initialized");
     
-    ESP_LOGI(TAG, "Motors initialized successfully");
-    ESP_LOGI(TAG, "");
-    vTaskDelay(pdMS_TO_TICKS(1000));
+    // Initialize web control
+    ESP_LOGI(TAG, "Initializing web control...");
+    web_control_config_t web_config = WEB_CONTROL_DEFAULT_CONFIG();
+    ret = web_control_init(&web_config);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to initialize web control!");
+        return;
+    }
+    ESP_LOGI(TAG, "✓ Web control initialized");
     
-    // ========== TEST 1: Drive Motor ==========
-    ESP_LOGI(TAG, "╔════════════════════════════════════════╗");
-    ESP_LOGI(TAG, "║  TEST 1: Drive Motor (Rear)            ║");
-    ESP_LOGI(TAG, "╚════════════════════════════════════════╝");
-    ESP_LOGI(TAG, "");
+    // Set motor callback
+    web_control_set_motor_callback(motor_callback);
     
-    ESP_LOGI(TAG, "→ Forward 30%%");
-    motor_drive_forward(30);
-    vTaskDelay(pdMS_TO_TICKS(2000));
-    motor_drive_stop();
-    vTaskDelay(pdMS_TO_TICKS(500));
+    // Start web server
+    ESP_LOGI(TAG, "Starting web server...");
+    ret = web_control_start();
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to start web server!");
+        return;
+    }
     
-    ESP_LOGI(TAG, "→ Forward 50%%");
-    motor_drive_forward(50);
-    vTaskDelay(pdMS_TO_TICKS(2000));
-    motor_drive_stop();
-    vTaskDelay(pdMS_TO_TICKS(500));
-    
-    ESP_LOGI(TAG, "→ Forward 70%%");
-    motor_drive_forward(70);
-    vTaskDelay(pdMS_TO_TICKS(2000));
-    motor_drive_stop();
-    vTaskDelay(pdMS_TO_TICKS(1000));
-
-    ESP_LOGI(TAG, "→ Forward 100%%");
-    motor_drive_forward(100);
-    vTaskDelay(pdMS_TO_TICKS(2000));
-    motor_drive_stop();
-    vTaskDelay(pdMS_TO_TICKS(1000));
-    
-    ESP_LOGI(TAG, "← Backward 30%%");
-    motor_drive_backward(30);
-    vTaskDelay(pdMS_TO_TICKS(2000));
-    motor_drive_stop();
-    vTaskDelay(pdMS_TO_TICKS(500));
-    
-    ESP_LOGI(TAG, "← Backward 50%%");
-    motor_drive_backward(50);
-    vTaskDelay(pdMS_TO_TICKS(2000));
-    motor_drive_stop();
-    vTaskDelay(pdMS_TO_TICKS(1000));
-
-    ESP_LOGI(TAG, "← Backward 70%%");
-    motor_drive_backward(70);
-    vTaskDelay(pdMS_TO_TICKS(2000));
-    motor_drive_stop();
-    vTaskDelay(pdMS_TO_TICKS(1000));
-
-    ESP_LOGI(TAG, "← Backward 100%%");
-    motor_drive_backward(100);
-    vTaskDelay(pdMS_TO_TICKS(2000));
-    motor_drive_stop();
-    vTaskDelay(pdMS_TO_TICKS(1000));
-    
-    ESP_LOGI(TAG, "✓ Drive motor test complete");
-    ESP_LOGI(TAG, "");
-    vTaskDelay(pdMS_TO_TICKS(2000));
-    
-    // // ========== TEST 2: Steering Motor ==========
-    // ESP_LOGI(TAG, "╔════════════════════════════════════════╗");
-    // ESP_LOGI(TAG, "║  TEST 2: Steering Motor (Front)        ║");
-    // ESP_LOGI(TAG, "╚════════════════════════════════════════╝");
-    // ESP_LOGI(TAG, "");
-    
-    // ESP_LOGI(TAG, "⊙ Center position");
-    // motor_steering_center();
-    // vTaskDelay(pdMS_TO_TICKS(1500));
-    
-    // ESP_LOGI(TAG, "← Left 50%%");
-    // motor_steering_set_angle(-50);
-    // vTaskDelay(pdMS_TO_TICKS(1500));
-    
-    // ESP_LOGI(TAG, "⊙ Center");
-    // motor_steering_center();
-    // vTaskDelay(pdMS_TO_TICKS(1500));
-    
-    // ESP_LOGI(TAG, "→ Right 50%%");
-    // motor_steering_set_angle(50);
-    // vTaskDelay(pdMS_TO_TICKS(1500));
-    
-    // ESP_LOGI(TAG, "⊙ Center");
-    // motor_steering_center();
-    // vTaskDelay(pdMS_TO_TICKS(1500));
-    
-    // ESP_LOGI(TAG, "← Full left");
-    // motor_steering_set_position(STEER_LEFT);
-    // vTaskDelay(pdMS_TO_TICKS(1500));
-    
-    // ESP_LOGI(TAG, "⊙ Center");
-    // motor_steering_center();
-    // vTaskDelay(pdMS_TO_TICKS(1500));
-    
-    // ESP_LOGI(TAG, "→ Full right");
-    // motor_steering_set_position(STEER_RIGHT);
-    // vTaskDelay(pdMS_TO_TICKS(1500));
-    
-    // ESP_LOGI(TAG, "⊙ Center");
-    // motor_steering_center();
-    // vTaskDelay(pdMS_TO_TICKS(1000));
-    
-    // ESP_LOGI(TAG, "✓ Steering motor test complete");
-    // ESP_LOGI(TAG, "");
-    // vTaskDelay(pdMS_TO_TICKS(2000));
-    
-    // // ========== TEST 3: Combined Movement ==========
-    // ESP_LOGI(TAG, "╔════════════════════════════════════════╗");
-    // ESP_LOGI(TAG, "║  TEST 3: Combined Movement             ║");
-    // ESP_LOGI(TAG, "╚════════════════════════════════════════╝");
-    // ESP_LOGI(TAG, "");
-    
-    // ESP_LOGI(TAG, "↑ Forward straight (60%%)");
-    // motor_move_forward(60, 0);
-    // vTaskDelay(pdMS_TO_TICKS(2000));
-    // motor_stop_all();
-    // vTaskDelay(pdMS_TO_TICKS(1000));
-    
-    // ESP_LOGI(TAG, "↖ Forward + Left turn");
-    // motor_turn_left(50);
-    // vTaskDelay(pdMS_TO_TICKS(2000));
-    // motor_stop_all();
-    // vTaskDelay(pdMS_TO_TICKS(1000));
-    
-    // ESP_LOGI(TAG, "↗ Forward + Right turn");
-    // motor_turn_right(50);
-    // vTaskDelay(pdMS_TO_TICKS(2000));
-    // motor_stop_all();
-    // vTaskDelay(pdMS_TO_TICKS(1000));
-    
-    // ESP_LOGI(TAG, "↙ Backward + Left");
-    // motor_move_backward(40, -60);
-    // vTaskDelay(pdMS_TO_TICKS(2000));
-    // motor_stop_all();
-    // vTaskDelay(pdMS_TO_TICKS(1000));
-    
-    // ESP_LOGI(TAG, "↘ Backward + Right");
-    // motor_move_backward(40, 60);
-    // vTaskDelay(pdMS_TO_TICKS(2000));
-    // motor_stop_all();
-    // vTaskDelay(pdMS_TO_TICKS(1000));
-    
-    // ESP_LOGI(TAG, "✓ Combined movement test complete");
-    // ESP_LOGI(TAG, "");
-    
-    // Final message
     ESP_LOGI(TAG, "");
     ESP_LOGI(TAG, "╔════════════════════════════════════════╗");
-    ESP_LOGI(TAG, "║  All Tests Completed Successfully!     ║");
+    ESP_LOGI(TAG, "║  Web Control Ready!                    ║");
     ESP_LOGI(TAG, "╚════════════════════════════════════════╝");
     ESP_LOGI(TAG, "");
-    ESP_LOGI(TAG, "Motors are now stopped.");
-    ESP_LOGI(TAG, "You can now integrate with sensors for autonomous driving.");
+    ESP_LOGI(TAG, "📱 Connect your phone to WiFi:");
+    ESP_LOGI(TAG, "   SSID: RC_Car_Control");
+    ESP_LOGI(TAG, "   Password: rccar123");
+    ESP_LOGI(TAG, "");
+    ESP_LOGI(TAG, "🌐 Open browser and go to:");
+    ESP_LOGI(TAG, "   http://192.168.4.1");
+    ESP_LOGI(TAG, "");
+    
+    // Telemetry task - send data to web interface
+    while (1) {
+        if (web_control_is_connected()) {
+            // Send telemetry (battery, speed, signal)
+            // For now, using dummy values
+            web_control_send_telemetry(87, 0.0, 100);
+        }
+        vTaskDelay(pdMS_TO_TICKS(100)); // Update every 100ms
+    }
 }
