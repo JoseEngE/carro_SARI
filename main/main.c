@@ -75,6 +75,12 @@ void app_main(void) {
     vTaskDelay(pdMS_TO_TICKS(2000));
     motor_drive_stop();
     vTaskDelay(pdMS_TO_TICKS(1000));
+
+    ESP_LOGI(TAG, "→ Forward 100%%");
+    motor_drive_forward(100);
+    vTaskDelay(pdMS_TO_TICKS(2000));
+    motor_drive_stop();
+    vTaskDelay(pdMS_TO_TICKS(1000));
     
     ESP_LOGI(TAG, "← Backward 30%%");
     motor_drive_backward(30);
@@ -87,95 +93,107 @@ void app_main(void) {
     vTaskDelay(pdMS_TO_TICKS(2000));
     motor_drive_stop();
     vTaskDelay(pdMS_TO_TICKS(1000));
+
+    ESP_LOGI(TAG, "← Backward 70%%");
+    motor_drive_backward(70);
+    vTaskDelay(pdMS_TO_TICKS(2000));
+    motor_drive_stop();
+    vTaskDelay(pdMS_TO_TICKS(1000));
+
+    ESP_LOGI(TAG, "← Backward 100%%");
+    motor_drive_backward(100);
+    vTaskDelay(pdMS_TO_TICKS(2000));
+    motor_drive_stop();
+    vTaskDelay(pdMS_TO_TICKS(1000));
     
     ESP_LOGI(TAG, "✓ Drive motor test complete");
     ESP_LOGI(TAG, "");
     vTaskDelay(pdMS_TO_TICKS(2000));
     
-    // ========== TEST 2: Steering Motor ==========
-    ESP_LOGI(TAG, "╔════════════════════════════════════════╗");
-    ESP_LOGI(TAG, "║  TEST 2: Steering Motor (Front)        ║");
-    ESP_LOGI(TAG, "╚════════════════════════════════════════╝");
-    ESP_LOGI(TAG, "");
+    // // ========== TEST 2: Steering Motor ==========
+    // ESP_LOGI(TAG, "╔════════════════════════════════════════╗");
+    // ESP_LOGI(TAG, "║  TEST 2: Steering Motor (Front)        ║");
+    // ESP_LOGI(TAG, "╚════════════════════════════════════════╝");
+    // ESP_LOGI(TAG, "");
     
-    ESP_LOGI(TAG, "⊙ Center position");
-    motor_steering_center();
-    vTaskDelay(pdMS_TO_TICKS(1500));
+    // ESP_LOGI(TAG, "⊙ Center position");
+    // motor_steering_center();
+    // vTaskDelay(pdMS_TO_TICKS(1500));
     
-    ESP_LOGI(TAG, "← Left 50%%");
-    motor_steering_set_angle(-50);
-    vTaskDelay(pdMS_TO_TICKS(1500));
+    // ESP_LOGI(TAG, "← Left 50%%");
+    // motor_steering_set_angle(-50);
+    // vTaskDelay(pdMS_TO_TICKS(1500));
     
-    ESP_LOGI(TAG, "⊙ Center");
-    motor_steering_center();
-    vTaskDelay(pdMS_TO_TICKS(1500));
+    // ESP_LOGI(TAG, "⊙ Center");
+    // motor_steering_center();
+    // vTaskDelay(pdMS_TO_TICKS(1500));
     
-    ESP_LOGI(TAG, "→ Right 50%%");
-    motor_steering_set_angle(50);
-    vTaskDelay(pdMS_TO_TICKS(1500));
+    // ESP_LOGI(TAG, "→ Right 50%%");
+    // motor_steering_set_angle(50);
+    // vTaskDelay(pdMS_TO_TICKS(1500));
     
-    ESP_LOGI(TAG, "⊙ Center");
-    motor_steering_center();
-    vTaskDelay(pdMS_TO_TICKS(1500));
+    // ESP_LOGI(TAG, "⊙ Center");
+    // motor_steering_center();
+    // vTaskDelay(pdMS_TO_TICKS(1500));
     
-    ESP_LOGI(TAG, "← Full left");
-    motor_steering_set_position(STEER_LEFT);
-    vTaskDelay(pdMS_TO_TICKS(1500));
+    // ESP_LOGI(TAG, "← Full left");
+    // motor_steering_set_position(STEER_LEFT);
+    // vTaskDelay(pdMS_TO_TICKS(1500));
     
-    ESP_LOGI(TAG, "⊙ Center");
-    motor_steering_center();
-    vTaskDelay(pdMS_TO_TICKS(1500));
+    // ESP_LOGI(TAG, "⊙ Center");
+    // motor_steering_center();
+    // vTaskDelay(pdMS_TO_TICKS(1500));
     
-    ESP_LOGI(TAG, "→ Full right");
-    motor_steering_set_position(STEER_RIGHT);
-    vTaskDelay(pdMS_TO_TICKS(1500));
+    // ESP_LOGI(TAG, "→ Full right");
+    // motor_steering_set_position(STEER_RIGHT);
+    // vTaskDelay(pdMS_TO_TICKS(1500));
     
-    ESP_LOGI(TAG, "⊙ Center");
-    motor_steering_center();
-    vTaskDelay(pdMS_TO_TICKS(1000));
+    // ESP_LOGI(TAG, "⊙ Center");
+    // motor_steering_center();
+    // vTaskDelay(pdMS_TO_TICKS(1000));
     
-    ESP_LOGI(TAG, "✓ Steering motor test complete");
-    ESP_LOGI(TAG, "");
-    vTaskDelay(pdMS_TO_TICKS(2000));
+    // ESP_LOGI(TAG, "✓ Steering motor test complete");
+    // ESP_LOGI(TAG, "");
+    // vTaskDelay(pdMS_TO_TICKS(2000));
     
-    // ========== TEST 3: Combined Movement ==========
-    ESP_LOGI(TAG, "╔════════════════════════════════════════╗");
-    ESP_LOGI(TAG, "║  TEST 3: Combined Movement             ║");
-    ESP_LOGI(TAG, "╚════════════════════════════════════════╝");
-    ESP_LOGI(TAG, "");
+    // // ========== TEST 3: Combined Movement ==========
+    // ESP_LOGI(TAG, "╔════════════════════════════════════════╗");
+    // ESP_LOGI(TAG, "║  TEST 3: Combined Movement             ║");
+    // ESP_LOGI(TAG, "╚════════════════════════════════════════╝");
+    // ESP_LOGI(TAG, "");
     
-    ESP_LOGI(TAG, "↑ Forward straight (60%%)");
-    motor_move_forward(60, 0);
-    vTaskDelay(pdMS_TO_TICKS(2000));
-    motor_stop_all();
-    vTaskDelay(pdMS_TO_TICKS(1000));
+    // ESP_LOGI(TAG, "↑ Forward straight (60%%)");
+    // motor_move_forward(60, 0);
+    // vTaskDelay(pdMS_TO_TICKS(2000));
+    // motor_stop_all();
+    // vTaskDelay(pdMS_TO_TICKS(1000));
     
-    ESP_LOGI(TAG, "↖ Forward + Left turn");
-    motor_turn_left(50);
-    vTaskDelay(pdMS_TO_TICKS(2000));
-    motor_stop_all();
-    vTaskDelay(pdMS_TO_TICKS(1000));
+    // ESP_LOGI(TAG, "↖ Forward + Left turn");
+    // motor_turn_left(50);
+    // vTaskDelay(pdMS_TO_TICKS(2000));
+    // motor_stop_all();
+    // vTaskDelay(pdMS_TO_TICKS(1000));
     
-    ESP_LOGI(TAG, "↗ Forward + Right turn");
-    motor_turn_right(50);
-    vTaskDelay(pdMS_TO_TICKS(2000));
-    motor_stop_all();
-    vTaskDelay(pdMS_TO_TICKS(1000));
+    // ESP_LOGI(TAG, "↗ Forward + Right turn");
+    // motor_turn_right(50);
+    // vTaskDelay(pdMS_TO_TICKS(2000));
+    // motor_stop_all();
+    // vTaskDelay(pdMS_TO_TICKS(1000));
     
-    ESP_LOGI(TAG, "↙ Backward + Left");
-    motor_move_backward(40, -60);
-    vTaskDelay(pdMS_TO_TICKS(2000));
-    motor_stop_all();
-    vTaskDelay(pdMS_TO_TICKS(1000));
+    // ESP_LOGI(TAG, "↙ Backward + Left");
+    // motor_move_backward(40, -60);
+    // vTaskDelay(pdMS_TO_TICKS(2000));
+    // motor_stop_all();
+    // vTaskDelay(pdMS_TO_TICKS(1000));
     
-    ESP_LOGI(TAG, "↘ Backward + Right");
-    motor_move_backward(40, 60);
-    vTaskDelay(pdMS_TO_TICKS(2000));
-    motor_stop_all();
-    vTaskDelay(pdMS_TO_TICKS(1000));
+    // ESP_LOGI(TAG, "↘ Backward + Right");
+    // motor_move_backward(40, 60);
+    // vTaskDelay(pdMS_TO_TICKS(2000));
+    // motor_stop_all();
+    // vTaskDelay(pdMS_TO_TICKS(1000));
     
-    ESP_LOGI(TAG, "✓ Combined movement test complete");
-    ESP_LOGI(TAG, "");
+    // ESP_LOGI(TAG, "✓ Combined movement test complete");
+    // ESP_LOGI(TAG, "");
     
     // Final message
     ESP_LOGI(TAG, "");
