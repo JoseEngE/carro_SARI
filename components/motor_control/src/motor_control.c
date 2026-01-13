@@ -196,13 +196,15 @@ esp_err_t motor_steering_set_angle(int8_t angle) {
     
     uint32_t duty_a = 0, duty_b = 0;
     
+#define STEERING_MAX_DUTY_PERCENT 75  // Limit to 75% power to prevent brownouts
+
     if (angle < 0) {
         // Turn left
         duty_a = 0;
-        duty_b = ((-angle) * PWM_MAX_DUTY) / 100;
+        duty_b = ((-angle) * PWM_MAX_DUTY * STEERING_MAX_DUTY_PERCENT) / (100 * 100);
     } else if (angle > 0) {
         // Turn right
-        duty_a = (angle * PWM_MAX_DUTY) / 100;
+        duty_a = (angle * PWM_MAX_DUTY * STEERING_MAX_DUTY_PERCENT) / (100 * 100);
         duty_b = 0;
     }
     // else: angle == 0, both duties remain 0 (center)

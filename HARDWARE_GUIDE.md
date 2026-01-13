@@ -254,3 +254,12 @@ gpio_set_level(XSHUT_PIN, 1);  // Encender
 - [Datasheet VL53L0X](https://www.st.com/resource/en/datasheet/vl53l0x.pdf)
 - [API Documentation](https://www.st.com/content/st_com/en/products/embedded-software/proximity-sensors-software/stsw-img005.html)
 - [ESP-IDF I2C Driver](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/i2c.html)
+
+## ⚡ Brownout Prevention (ESP32 Reset Fix)
+
+If your ESP32 resets when the steering motor is activated (especially if stalled), it is likely due to a voltage drop ("brownout").
+
+### Solutions:
+1.  **Add a Capacitor**: Place a large electrolytic capacitor (470µF to 1000µF, 10V or higher) across the power input pins (VIN/5V and GND) of the ESP32. This acts as a local energy reservoir.
+2.  **Separate Power**: Use a dedicated 5V Buck Converter (Step-down) for the ESP32, separate from the motor power source, but sharing a common Ground.
+3.  **Check Wiring**: Ensure wires from the battery to the motor driver are thick enough (at least 22AWG) to handle the surge current without significant voltage drop.
