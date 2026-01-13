@@ -42,38 +42,50 @@
 
 ## 🔌 Diagrama de Conexión
 
-### Conexión Básica ESP32 ↔ VL53L0X
+### Conexión: Módulo CJVL53L0XV2 ↔ ESP32
+
+El módulo **CJVL53L0XV2** (color morado) tiene el siguiente pinout.
+
+> [!WARNING]
+> **Voltaje VCC**: Conecta VCC a **3.3V** del ESP32. Aunque el módulo puede tolerar 5V, usar 3.3V asegura que las señales I2C (SDA/SCL) sean de 3.3V, protegiendo al ESP32.
 
 ```
-ESP32                    VL53L0X Module
+ESP32 (3.3V System)      CJVL53L0XV2 (Sensor)
 ┌─────────────┐         ┌──────────────┐
+│             │         │  ○ VCC       │◄─── 3.3V (ESP32)
+│   GND     ──┼─────────┼──○ GND       │◄─── GND
 │             │         │              │
-│   GPIO 21 ──┼─────────┼── SDA        │
+│   GPIO 22 ──┼─────────┼──○ SCL       │
 │             │         │              │
-│   GPIO 22 ──┼─────────┼── SCL        │
+│   GPIO 21 ──┼─────────┼──○ SDA       │
 │             │         │              │
-│   3.3V    ──┼─────────┼── VCC        │
+│             │         │  ○ GPIO1     │ (Sin conectar)
 │             │         │              │
-│   GND     ──┼─────────┼── GND        │
-│             │         │              │
+│   GPIO X  ──┼─────────┼──○ XSHUT     │ (Opcional, para reset)
 └─────────────┘         └──────────────┘
 ```
 
-### Tabla de Conexiones
+## 🔋 Configuración de Energía (SM5308 + Motores)
 
-| ESP32 Pin | VL53L0X Pin | Función | Notas |
-|-----------|-------------|---------|-------|
-| GPIO 21 | SDA | Datos I2C | Requiere pull-up (generalmente incluido en módulo) |
-| GPIO 22 | SCL | Reloj I2C | Requiere pull-up (generalmente incluido en módulo) |
-| 3.3V | VCC | Alimentación | **NO usar 5V** |
-| GND | GND | Tierra | Común |
+Al usar el módulo Power Bank **SM5308** para alimentar tanto el ESP32 como los motores desde la misma salida de 5V, debes tener mucho cuidado con el ruido eléctrico.
 
-### Pines Opcionales (según módulo)
+### Topología de Energía (Compartida)
 
-| Pin | Función | Descripción |
-|-----|---------|-------------|
-| XSHUT | Shutdown | Apagado por hardware (activo bajo) |
-| GPIO1 | Interrupt | Señal de interrupción programable |
+```
+[ Batería ] ── [ SM5308 Power Bank ] ──┬──► +5V ──► [ Driver Motores ] ──► [ Motores ]
+                                       │
+                                       └──► +5V ──► [ ESP32-S3 ] (¡RIESGO DE RUIDO!)
+```
+
+### ⚠️ Problema Crítico: Ruido y Brownouts
+Los motores generan picos de voltaje que viajan por la línea de +5V y pueden reiniciar el ESP32.
+
+**Solución OBLIGATORIA:**
+1.  **Capacitor de Filtrado**: Conecta un capacitor electrolítico de **470µF a 1000µF (10V+)** directamente en los pines `5V` y `GND` del ESP32.
+2.  **Cables**: Usa cables cortos y gruesos para la alimentación.
+
+> [!NOTE]
+> El módulo SM5308 puede apagarse automáticamente si el consumo es muy bajo (menos de ~50mA). Si el ESP32 se apaga solo cuando los motores están detenidos, es posible que el power bank esté entrando en modo de ahorro.
 
 ## ⚙️ Configuración I2C
 
