@@ -9,6 +9,9 @@ let isConnected = false;
 let steeringValue = 0;
 let throttleValue = 0;
 
+// Speed Control
+let maxSpeedPercent = 50;
+
 // DOM elements
 const statusElement = document.getElementById('status');
 const statusText = statusElement.querySelector('.status-text');
@@ -22,6 +25,10 @@ const steeringJoystick = document.getElementById('steering-joystick');
 const steeringKnob = document.getElementById('steering-knob');
 const throttleJoystick = document.getElementById('throttle-joystick');
 const throttleKnob = document.getElementById('throttle-knob');
+
+// Speed slider elements
+const maxSpeedInput = document.getElementById('max-speed');
+const maxSpeedDisplay = document.getElementById('max-speed-value');
 
 // Initialize connection
 function startConnection() {
@@ -101,8 +108,12 @@ async function sendMotorCommand() {
 
     try {
         const msg = new Uint8Array(4);
+
+        // Apply speed limit to throttle
+        const limitedThrottle = Math.round((throttleValue * maxSpeedPercent) / 100);
+
         msg[0] = 0x01; // Motor control message
-        msg[1] = throttleValue; // Throttle (-100 to +100)
+        msg[1] = limitedThrottle; // Throttle (-100 to +100) with limit
         msg[2] = steeringValue; // Steering (-100 to +100)
         msg[3] = (msg[1] + msg[2]) & 0xFF; // Simple checksum
 
@@ -140,30 +151,40 @@ async function emergencyStop() {
     }
 }
 
-// Joystick handling
+// Joystick handling with Multi-touch support
 function setupJoystick(joystickElement, knobElement, isVertical, callback) {
-    let isDragging = false;
+    let currentTouchId = null;
     let startX = 0;
     let startY = 0;
-    let currentX = 0;
-    let currentY = 0;
 
     const maxDistance = 40; // Maximum distance from center
 
     function handleStart(e) {
-        isDragging = true;
-        const touch = e.touches ? e.touches[0] : e;
+        if (currentTouchId !== null) return; // Already dragging
+
+        const touch = e.changedTouches[0];
+        currentTouchId = touch.identifier;
+
         const rect = joystickElement.getBoundingClientRect();
         startX = rect.left + rect.width / 2;
         startY = rect.top + rect.height / 2;
+
         handleMove(e);
     }
 
     function handleMove(e) {
-        if (!isDragging) return;
-
         e.preventDefault();
-        const touch = e.touches ? e.touches[0] : e;
+
+        // Find our touch
+        let touch = null;
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            if (e.changedTouches[i].identifier === currentTouchId) {
+                touch = e.changedTouches[i];
+                break;
+            }
+        }
+
+        if (!touch) return;
 
         let deltaX = touch.clientX - startX;
         let deltaY = touch.clientY - startY;
@@ -175,9 +196,6 @@ function setupJoystick(joystickElement, knobElement, isVertical, callback) {
             deltaX = Math.cos(angle) * maxDistance;
             deltaY = Math.sin(angle) * maxDistance;
         }
-
-        currentX = deltaX;
-        currentY = deltaY;
 
         updateJoystickPosition(knobElement, deltaX, deltaY);
 
@@ -195,25 +213,73 @@ function setupJoystick(joystickElement, knobElement, isVertical, callback) {
     }
 
     function handleEnd(e) {
-        if (!isDragging) return;
-        isDragging = false;
+        // Find our touch
+        let touchFound = false;
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            if (e.changedTouches[i].identifier === currentTouchId) {
+                touchFound = true;
+                break;
+            }
+        }
 
-        // Return to center with animation
-        currentX = 0;
-        currentY = 0;
+        if (!touchFound) return;
+
+        currentTouchId = null;
+
+        // Return to center
         updateJoystickPosition(knobElement, 0, 0);
         callback(0);
     }
 
     // Touch events
     joystickElement.addEventListener('touchstart', handleStart, { passive: false });
-    document.addEventListener('touchmove', handleMove, { passive: false });
-    document.addEventListener('touchend', handleEnd);
+    joystickElement.addEventListener('touchmove', handleMove, { passive: false });
+    joystickElement.addEventListener('touchend', handleEnd);
+    joystickElement.addEventListener('touchcancel', handleEnd);
 
-    // Mouse events (for desktop testing)
-    joystickElement.addEventListener('mousedown', handleStart);
-    document.addEventListener('mousemove', handleMove);
-    document.addEventListener('mouseup', handleEnd);
+    // Mouse events (for desktop testing - single pointer only)
+    let isDraggingMouse = false;
+    joystickElement.addEventListener('mousedown', (e) => {
+        isDraggingMouse = true;
+        const rect = joystickElement.getBoundingClientRect();
+        startX = rect.left + rect.width / 2;
+        startY = rect.top + rect.height / 2;
+
+        // Update initially
+        let deltaX = e.clientX - startX;
+        let deltaY = e.clientY - startY;
+        // ... (reuse logic or keep simple) - keeping simple for readability
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isDraggingMouse) return;
+        let deltaX = e.clientX - startX;
+        let deltaY = e.clientY - startY;
+
+        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        if (distance > maxDistance) {
+            const angle = Math.atan2(deltaY, deltaX);
+            deltaX = Math.cos(angle) * maxDistance;
+            deltaY = Math.sin(angle) * maxDistance;
+        }
+        updateJoystickPosition(knobElement, deltaX, deltaY);
+
+        let value;
+        if (isVertical) {
+            value = Math.round((-deltaY / maxDistance) * 100);
+        } else {
+            value = Math.round((deltaX / maxDistance) * 100);
+        }
+        value = Math.max(-100, Math.min(100, value));
+        callback(value);
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (!isDraggingMouse) return;
+        isDraggingMouse = false;
+        updateJoystickPosition(knobElement, 0, 0);
+        callback(0);
+    });
 }
 
 function updateJoystickPosition(knob, x, y) {
@@ -229,6 +295,12 @@ setupJoystick(throttleJoystick, throttleKnob, true, (value) => {
     throttleValue = value;
 });
 
+// Speed Slider Logic
+maxSpeedInput.addEventListener('input', (e) => {
+    maxSpeedPercent = parseInt(e.target.value);
+    maxSpeedDisplay.textContent = `${maxSpeedPercent}%`;
+});
+
 // Stop button
 stopButton.addEventListener('click', emergencyStop);
 stopButton.addEventListener('touchstart', (e) => {
@@ -238,7 +310,7 @@ stopButton.addEventListener('touchstart', (e) => {
 
 // Prevent scrolling and zooming
 document.addEventListener('touchmove', (e) => {
-    if (e.target.closest('.joystick') || e.target.closest('.stop-button')) {
+    if (e.target.closest('.joystick') || e.target.closest('.stop-button') || e.target.closest('.speed-slider')) {
         e.preventDefault();
     }
 }, { passive: false });
@@ -246,6 +318,10 @@ document.addEventListener('touchmove', (e) => {
 // Initialize connection on load
 window.addEventListener('load', () => {
     startConnection();
+
+    // Set initial display value
+    maxSpeedDisplay.textContent = `${maxSpeedInput.value}%`;
+    maxSpeedPercent = parseInt(maxSpeedInput.value);
 });
 
 // Cleanup on unload

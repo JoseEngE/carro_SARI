@@ -12,7 +12,10 @@
 │  │  ┌─────────────┐  ┌──────────────────┐   │  │
 │  │  │  HTML/CSS   │  │   JavaScript     │   │  │
 │  │  │  Interface  │  │   Controller     │   │  │
-│  │  └─────────────┘  └──────────────────┘   │  │
+│  │  └─────────────┘  └────────┬─────────┘   │  │
+│  │                            │             │  │
+│  │                       (Speed Limiter)    │  │
+│  └───────────────────────────────────────────┘  │
 │  └───────────────────────────────────────────┘  │
 └──────────────────┬──────────────────────────────┘
                    │ HTTP (WiFi)
@@ -310,7 +313,16 @@ static void motor_timeout_callback(void* arg)
 }
 ```
 
-### 2. Validación de Comandos
+### 2. Control de Velocidad (Cliente)
+
+Implementado en `app.js` mediante un slider en la interfaz:
+
+```javascript
+// Aplicar límite de velocidad
+const limitedThrottle = Math.round((throttleValue * maxSpeedPercent) / 100);
+```
+
+### 3. Validación de Comandos (Servidor)
 
 ```c
 // Limitar valores
@@ -319,6 +331,10 @@ if (throttle > 100) throttle = 100;
 if (steering < -100) steering = -100;
 if (steering > 100) steering = 100;
 ```
+
+### 4. Soporte Multi-Touch
+
+Implementado usando `touch.identifier` para rastrear dedos independientes para Throttle y Steering, permitiendo control simultáneo sin conflictos.
 
 ### 3. Autenticación WiFi
 
