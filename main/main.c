@@ -36,8 +36,8 @@ void motor_callback(int8_t throttle, int8_t steering)
     }
     
     // Apply steering (servo)
-    // Map -100 to 100 range to 52-84 degrees
-    float angle = map_range((float)steering, -100.0f, 100.0f, 84.0f, 52.0f);
+    // Map -100 to 100 range to 75-41 degrees
+    float angle = map_range((float)steering, -100.0f, 100.0f, 75.0f, 41.0f);
     servo_set_angle(angle);
 }
 
@@ -77,9 +77,9 @@ void app_main(void) {
         .min_pulse_width_us = 500,
         .max_pulse_width_us = 2400,
         .frequency = 50,
-        .min_angle = 52.0f,
-        .max_angle = 84.0f,
-        .initial_angle = 68.0f
+        .min_angle = 41.0f,
+        .max_angle = 75.0f,
+        .initial_angle = 58.0f
     };
     ret = servo_init(&servo_cfg);
     if (ret != ESP_OK) {
