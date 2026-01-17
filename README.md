@@ -5,8 +5,10 @@ Sistema de control para carro RC con Ackermann steering (tracción trasera, dire
 ## 🎯 Características
 
 - ✅ **Control de motores PWM** con MX1508
-- ✅ **Ackermann steering** (motor trasero + dirección delantera)
+- ✅ **Dirección con Servomotor** (MG90S)
 - ✅ **Control web móvil** - Controla desde tu teléfono
+- ✅ **Multi-touch** - Joystick dual independiente
+- ✅ **Control de Velocidad** - Slider ajustable (10-100%)
 - ✅ **Interfaz minimalista** - Diseño limpio y responsive
 - ✅ **WiFi Access Point** - El ESP32 crea su propia red
 - ✅ **Sensor de distancia VL53L0X** para detección de obstáculos
@@ -23,6 +25,12 @@ sensor/
 │   │   │   └── motor_control.h
 │   │   ├── src/
 │   │   │   └── motor_control.c
+│   │   └── CMakeLists.txt
+│   ├── servo_control/          # Control PWM de servomotor
+│   │   ├── include/
+│   │   │   └── servo_control.h
+│   │   ├── src/
+│   │   │   └── servo_control.c
 │   │   └── CMakeLists.txt
 │   ├── web_control/            # Control web desde móvil
 │   │   ├── include/
@@ -64,12 +72,13 @@ sensor/
 - **Flash:** 2MB mínimo
 - **RAM:** 512KB
 
-### Motores y Drivers
-- **Driver:** MX1508 (x2)
+### Motores y Actuadores
+- **Driver:** MX1508 (x1) para motor de tracción
 - **Motor tracción:** Conectado a GPIO 7, 8
-- **Motor dirección:** Conectado a GPIO 9, 10
+- **Servo dirección:** MG90S conectado a GPIO 9
 - **Alimentación motores:** 5V (separada del ESP32)
-- **PWM:** 1000 Hz
+- **PWM Tracción:** 1000 Hz
+- **PWM Servo:** 50 Hz
 
 ### Sensor de Distancia
 - **Modelo:** VL53L0X
@@ -118,20 +127,28 @@ idf.py -p COM4 flash monitor
 
 ### Motor Control
 
-Control PWM para motores DC con MX1508.
+Control PWM para motor DC de tracción con MX1508.
 
 **Características:**
 - Control de velocidad -100% a +100%
-- Control de dirección -100° a +100°
-- Funciones de alto nivel (adelante, atrás, girar)
 - Thread-safe con mutexes
+
+### Servo Control
+
+Control PWM para servomotor de dirección (MG90S).
+
+**Características:**
+- Control de ángulo preciso
+- Mapeo de ángulos configurables (min/max)
+- Frecuencia 50Hz estándar
 
 **Ejemplo de uso:**
 
 ```c
 #include "motor_control.h"
+#include "servo_control.h"
 
-// Configurar motores
+// Configurar motor tracción
 motor_config_t drive_config = {
     .in1_pin = GPIO_NUM_7,
     .in2_pin = GPIO_NUM_8,
@@ -141,23 +158,26 @@ motor_config_t drive_config = {
     .channel_b = LEDC_CHANNEL_1
 };
 
-motor_config_t steering_config = {
-    .in1_pin = GPIO_NUM_9,
-    .in2_pin = GPIO_NUM_10,
-    .pwm_freq_hz = 1000,
-    .timer = LEDC_TIMER_1,
-    .channel_a = LEDC_CHANNEL_2,
-    .channel_b = LEDC_CHANNEL_3
+// Configurar servo
+servo_config_t servo_cfg = {
+    .gpio_num = GPIO_NUM_9,
+    .timer_number = LEDC_TIMER_1,
+    .channel_number = LEDC_CHANNEL_2,
+    .min_pulse_width_us = 500,
+    .max_pulse_width_us = 2400,
+    .frequency = 50,
+    .min_angle = 60.0f,
+    .max_angle = 120.0f,
+    .initial_angle = 90.0f
 };
 
 // Inicializar
-motor_control_init(&drive_config, &steering_config);
+motor_control_init(&drive_config, NULL);
+servo_init(&servo_cfg);
 
 // Controlar
-motor_drive_forward(50);        // Adelante 50%
-motor_steering_set_angle(-30);  // Girar izquierda 30°
-motor_turn_left(60);            // Giro completo izquierda
-motor_stop_all();               // Detener todo
+motor_drive_forward(50);     // Adelante 50%
+servo_set_angle(80.0f);      // Girar servo
 ```
 
 ### Web Control
@@ -184,6 +204,7 @@ web_control_init(&web_config);
 
 // Registrar callback de motor
 void motor_callback(int8_t throttle, int8_t steering) {
+    // Control Motor Tracción
     if (throttle > 5) {
         motor_drive_forward(throttle);
     } else if (throttle < -5) {
@@ -191,7 +212,11 @@ void motor_callback(int8_t throttle, int8_t steering) {
     } else {
         motor_drive_stop();
     }
-    motor_steering_set_angle(steering);
+    
+    // Control Servo Dirección
+    // Mapear -100..100 a grados (ej. 60..120)
+    float angle = 90.0f + (steering * 0.3f); 
+    servo_set_angle(angle);
 }
 web_control_set_motor_callback(motor_callback);
 
@@ -286,7 +311,8 @@ Motores ─────────────┘
 ### Interfaz Minimalista
 
 - **Diseño limpio** - Tema claro con sombras sutiles
-- **Joysticks virtuales** - Control preciso con touch
+- **Joysticks virtuales** - Control preciso con multi-touch nativo
+- **Speed Limiter** - Slider para ajustar velocidad máxima
 - **Responsive** - Adaptable a diferentes tamaños de pantalla
 - **Indicadores en tiempo real** - Batería, velocidad, señal, latencia
 

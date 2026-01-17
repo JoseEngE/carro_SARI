@@ -9,6 +9,8 @@ El componente `web_control` permite controlar el RC car desde un teléfono móvi
 - ✅ **WiFi Access Point** - El ESP32 crea su propia red WiFi
 - ✅ **Interfaz minimalista** - Diseño limpio y fácil de usar
 - ✅ **Control dual joystick** - Throttle (velocidad) y Steering (dirección)
+- ✅ **Multi-touch** - Control simultáneo e independiente de ambos joysticks
+- ✅ **Control de Velocidad** - Slider para limitar la velocidad máxima
 - ✅ **Botón de emergencia** - Detención inmediata
 - ✅ **Telemetría en tiempo real** - Batería, velocidad, señal
 - ✅ **HTTP Polling** - Compatible con ESP-IDF 5.5.1
@@ -50,7 +52,12 @@ idf.py -p COM4 flash monitor
 - **Centro**: Detenido
 
 #### Botón STOP
+#### Botón STOP
 - Presiona el botón rojo central para detener inmediatamente
+
+### Paso 5: Ajustar Velocidad Máxima
+
+Usa el slider "Max Speed" debajo de los controles para limitar la velocidad máxima del carro (10% a 100%). Ideal para interiores o para aprender a conducir.
 
 ## 🔧 Configuración
 

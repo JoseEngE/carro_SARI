@@ -8,6 +8,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include <string.h>
+#include "esp_timer.h"
 
 static const char *TAG = "MOTOR_CTRL";
 
@@ -107,7 +108,7 @@ static esp_err_t set_motor_duty(motor_state_t* motor, uint32_t duty_a, uint32_t 
 
 esp_err_t motor_control_init(const motor_config_t* drive_config, 
                               const motor_config_t* steering_config) {
-    if (!drive_config || !steering_config) {
+    if (!drive_config) {
         return ESP_ERR_INVALID_ARG;
     }
     
@@ -125,15 +126,20 @@ esp_err_t motor_control_init(const motor_config_t* drive_config,
     }
     
     // Initialize steering motor
-    ret = init_motor(&steering_motor, steering_config);
-    if (ret != ESP_OK) {
-        vSemaphoreDelete(motor_mutex);
-        return ret;
+    if (steering_config) {
+        ret = init_motor(&steering_motor, steering_config);
+        if (ret != ESP_OK) {
+            vSemaphoreDelete(motor_mutex);
+            return ret;
+        }
     }
     
     ESP_LOGI(TAG, "Motor control initialized");
     ESP_LOGI(TAG, "Drive motor: IN1=GPIO%d, IN2=GPIO%d", drive_config->in1_pin, drive_config->in2_pin);
-    ESP_LOGI(TAG, "Steering motor: IN1=GPIO%d, IN2=GPIO%d", steering_config->in1_pin, steering_config->in2_pin);
+    ESP_LOGI(TAG, "Drive motor: IN1=GPIO%d, IN2=GPIO%d", drive_config->in1_pin, drive_config->in2_pin);
+    if (steering_config) {
+        ESP_LOGI(TAG, "Steering motor: IN1=GPIO%d, IN2=GPIO%d", steering_config->in1_pin, steering_config->in2_pin);
+    }
     
     return ESP_OK;
 }
@@ -183,56 +189,74 @@ esp_err_t motor_drive_stop(void) {
     return motor_drive_set_speed(0);
 }
 
-esp_err_t motor_steering_set_angle(int8_t angle) {
-    if (!motor_mutex) {
-        return ESP_ERR_INVALID_STATE;
+// --- Steering Control with Kick-and-Hold ---
+
+#define STEERING_KICK_DUTY_PERCENT 60
+#define STEERING_HOLD_DUTY_PERCENT 25
+#define STEERING_KICK_TIME_MS      5
+
+static int8_t target_steering_angle = 0;
+static int64_t last_steering_change_time = 0;
+static TaskHandle_t steering_task_handle = NULL;
+
+static void steering_control_task(void *arg) {
+    int8_t current_angle = 0;
+    while (1) {
+        // Check if angle changed
+        if (current_angle != target_steering_angle) {
+            current_angle = target_steering_angle;
+            last_steering_change_time = esp_timer_get_time() / 1000; // us to ms
+        }
+
+        int64_t now = esp_timer_get_time() / 1000;
+        uint32_t duty_percent = 0;
+
+        // Determine Duty Cycle (Kick vs Hold)
+        if (target_steering_angle == 0) {
+            duty_percent = 0; // Center/Idle
+        } else {
+            if ((now - last_steering_change_time) < STEERING_KICK_TIME_MS) {
+                duty_percent = STEERING_KICK_DUTY_PERCENT; // Kick Phase
+            } else {
+                duty_percent = STEERING_HOLD_DUTY_PERCENT; // Hold Phase
+            }
+        }
+
+        // Apply PWM
+        uint32_t duty_val = (duty_percent * PWM_MAX_DUTY) / 100;
+        uint32_t duty_a = 0, duty_b = 0;
+
+        if (target_steering_angle < 0) { // Left
+            duty_b = duty_val;
+        } else if (target_steering_angle > 0) { // Right
+            duty_a = duty_val;
+        }
+
+        if (xSemaphoreTake(motor_mutex, pdMS_TO_TICKS(10))) {
+            set_motor_duty(&steering_motor, duty_a, duty_b);
+            xSemaphoreGive(motor_mutex);
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(20)); // Update loop
     }
+}
+
+esp_err_t motor_steering_set_angle(int8_t angle) {
+    if (!motor_mutex) return ESP_ERR_INVALID_STATE;
     
     // Clamp angle
     if (angle > 100) angle = 100;
     if (angle < -100) angle = -100;
-    
-    xSemaphoreTake(motor_mutex, portMAX_DELAY);
-    
-    uint32_t duty_a = 0, duty_b = 0;
-    
-#define STEERING_MAX_DUTY_PERCENT 75  // Limit to 75% power to prevent brownouts
 
-    if (angle < 0) {
-        // Turn left
-        duty_a = 0;
-        duty_b = ((-angle) * PWM_MAX_DUTY * STEERING_MAX_DUTY_PERCENT) / (100 * 100);
-    } else if (angle > 0) {
-        // Turn right
-        duty_a = (angle * PWM_MAX_DUTY * STEERING_MAX_DUTY_PERCENT) / (100 * 100);
-        duty_b = 0;
+    // Update target for the task
+    target_steering_angle = angle;
+    
+    // If task isn't running, start it
+    if (steering_task_handle == NULL) {
+        xTaskCreate(steering_control_task, "steering_task", 2048, NULL, 5, &steering_task_handle);
     }
-    // else: angle == 0, both duties remain 0 (center)
-    
-    esp_err_t ret = set_motor_duty(&steering_motor, duty_a, duty_b);
-    
-    xSemaphoreGive(motor_mutex);
-    
-    return ret;
-}
 
-esp_err_t motor_steering_set_position(steering_position_t position) {
-    int8_t angle = 0;
-    
-    switch (position) {
-        case STEER_LEFT:
-            angle = -80;  // 80% left
-            break;
-        case STEER_RIGHT:
-            angle = 80;   // 80% right
-            break;
-        case STEER_CENTER:
-        default:
-            angle = 0;
-            break;
-    }
-    
-    return motor_steering_set_angle(angle);
+    return ESP_OK;
 }
 
 esp_err_t motor_steering_center(void) {

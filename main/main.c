@@ -11,12 +11,17 @@
 #include "esp_log.h"
 #include "motor_control.h"
 #include "web_control.h"
+#include "servo_control.h"
 
 static const char *TAG = "MAIN";
 
 /**
  * @brief Motor control callback - called when web commands are received
  */
+float map_range(float x, float in_min, float in_max, float out_min, float out_max) {
+    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
 void motor_callback(int8_t throttle, int8_t steering)
 {
     ESP_LOGI(TAG, "Motor command: throttle=%d, steering=%d", throttle, steering);
@@ -30,12 +35,10 @@ void motor_callback(int8_t throttle, int8_t steering)
         motor_drive_stop();
     }
     
-    // Apply steering (left/right)
-    if (steering > 5 || steering < -5) {
-        motor_steering_set_angle(steering);
-    } else {
-        motor_steering_center();
-    }
+    // Apply steering (servo)
+    // Map -100 to 100 range to 75-41 degrees
+    float angle = map_range((float)steering, -100.0f, 100.0f, 75.0f, 41.0f);
+    servo_set_angle(angle);
 }
 
 void app_main(void) {
@@ -55,24 +58,35 @@ void app_main(void) {
         .channel_b = LEDC_CHANNEL_1
     };
     
-    // Configure steering motor (front)
-    motor_config_t steering_config = {
-        .in1_pin = GPIO_NUM_9,
-        .in2_pin = GPIO_NUM_10,
-        .pwm_freq_hz = 1000,
-        .timer = LEDC_TIMER_1,
-        .channel_a = LEDC_CHANNEL_2,
-        .channel_b = LEDC_CHANNEL_3
-    };
-    
-    // Initialize motors
-    ESP_LOGI(TAG, "Initializing motors...");
-    esp_err_t ret = motor_control_init(&drive_config, &steering_config);
+    // Initialize drive motor
+    ESP_LOGI(TAG, "Initializing drive motor...");
+    esp_err_t ret = motor_control_init(&drive_config, NULL); // Pass NULL for steering config
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to initialize motors!");
+        ESP_LOGE(TAG, "Failed to initialize drive motor!");
         return;
     }
-    ESP_LOGI(TAG, "✓ Motors initialized");
+    ESP_LOGI(TAG, "✓ Drive motor initialized");
+
+    // Initialize Servo
+    // Using GPIO 9 (original steering pin) and parameters from servomotor example
+    ESP_LOGI(TAG, "Initializing servo...");
+    servo_config_t servo_cfg = {
+        .gpio_num = GPIO_NUM_9,
+        .timer_number = LEDC_TIMER_1, // Different timer than drive motor (Timer 0)
+        .channel_number = LEDC_CHANNEL_2,
+        .min_pulse_width_us = 500,
+        .max_pulse_width_us = 2400,
+        .frequency = 50,
+        .min_angle = 41.0f,
+        .max_angle = 75.0f,
+        .initial_angle = 58.0f
+    };
+    ret = servo_init(&servo_cfg);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to initialize servo!");
+        return;
+    }
+    ESP_LOGI(TAG, "✓ Servo initialized");
     
     // Initialize web control
     ESP_LOGI(TAG, "Initializing web control...");
